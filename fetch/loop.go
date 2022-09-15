@@ -74,6 +74,8 @@ func Loop(
 					continue
 				}
 
+				fmt.Println(time.Now().Format("15:04:05.000"), fetchers[fetcherIndex].symbol, "fetching")
+
 				fetched, err := fetchers[fetcherIndex].Fetch()
 				if err != nil {
 					errc <- err

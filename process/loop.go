@@ -3,6 +3,7 @@ package process
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ArchitBhonsle/go-fpw/fetch"
 )
@@ -29,6 +30,8 @@ func Loop(
 			case <-exit:
 				return
 			case fetched := <-fetchResults:
+				fmt.Println(time.Now().Format("15:04:05.000"), fetched.Records.Data[0].PE.Underlying, "processing")
+
 				res, err := transform(fetched)
 				if err != nil {
 					errc <- err

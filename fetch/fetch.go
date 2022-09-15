@@ -66,8 +66,6 @@ func (fetcher *Fetcher) RawFetch() (Fetched, error) {
 }
 
 func (f *Fetcher) Fetch() (Fetched, error) {
-	fmt.Println(time.Now().Format("15:04:05.000"), f.symbol, "fetch")
-
 	refetchTimer := time.NewTimer(f.refetchInterval)
 	for r := 0; r <= f.nRetries; r++ {
 		fetched, err := f.RawFetch()

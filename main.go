@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/ArchitBhonsle/go-fpw/fetch"
 	"github.com/ArchitBhonsle/go-fpw/options"
 	"github.com/ArchitBhonsle/go-fpw/process"
+	"github.com/ArchitBhonsle/go-fpw/write"
 )
 
 // three stages
@@ -25,19 +23,10 @@ func main() {
 	exit := make(chan struct{})
 	cleanup := sync.WaitGroup{}
 
-	cleanExit := func() {
-		fmt.Println("exitting")
+	defer func() {
+		fmt.Println("exiting")
 		close(exit)
 		cleanup.Wait()
-	}
-	defer cleanExit()
-
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		cleanExit()
-		os.Exit(1)
 	}()
 
 	// fetch
@@ -62,14 +51,16 @@ func main() {
 		return
 	}
 
-	errors := merge(exit, &cleanup, fetchErrors, processErrors)
+	// write
+	db := write.NewDB("out/test.db")
+	writeErrors := write.Loop(processResults, db, exit, &cleanup)
+
+	errors := merge(exit, &cleanup, fetchErrors, processErrors, writeErrors)
 
 	for {
 		select {
 		case <-exit:
 			return
-		case pr := <-processResults:
-			fmt.Printf("%v %v processed\n", pr.Timestamp, pr.Underlying)
 		case e := <-errors:
 			fmt.Println(e)
 			return
