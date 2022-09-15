@@ -1,6 +1,8 @@
 package fetch
 
 import (
+	"fmt"
+	"sync"
 	"time"
 )
 
@@ -11,6 +13,7 @@ func Loop(
 	fetchInterval time.Duration,
 	refetchInterval time.Duration,
 	exit <-chan struct{},
+	cleanup *sync.WaitGroup,
 ) (<-chan Fetched, <-chan error, error) {
 	resc := make(chan Fetched)
 	errc := make(chan error)
@@ -34,7 +37,15 @@ func Loop(
 		return resc, errc, err
 	}
 
+	cleanup.Add(1)
 	go func() {
+		defer func() {
+			fmt.Println("cleanup: fetch.Loop")
+			close(resc)
+			close(errc)
+			cleanup.Done()
+		}()
+
 		// wait for a multiple of delta
 		now := time.Now()
 		next := now.Round(sleepInterval)
@@ -50,8 +61,6 @@ func Loop(
 		for {
 			select {
 			case <-exit:
-				close(resc)
-				close(errc)
 				return
 			case <-sleepTimer.C:
 				fetcherIndex = 0
