@@ -2,8 +2,9 @@ package fetch
 
 import (
 	"fmt"
-	"sync"
 	"time"
+
+	"github.com/ArchitBhonsle/go-fpw/pipes"
 )
 
 func Loop(
@@ -12,9 +13,8 @@ func Loop(
 	sleepInterval time.Duration,
 	fetchInterval time.Duration,
 	refetchInterval time.Duration,
-	exit <-chan struct{},
-	cleanup *sync.WaitGroup,
-) (<-chan Fetched, <-chan error, error) {
+	cleanup *pipes.Cleanup,
+) (<-chan Fetched, <-chan error) {
 	resc := make(chan Fetched)
 	errc := make(chan error)
 
@@ -22,9 +22,7 @@ func Loop(
 	for _, symbol := range symbols {
 		fetcher, err := NewFetcher(symbol, nRetries, refetchInterval)
 		if err != nil {
-			close(resc)
-			close(errc)
-			return resc, errc, err
+			panic(err)
 		}
 
 		fetchers = append(fetchers, fetcher)
@@ -32,12 +30,10 @@ func Loop(
 
 	statusChecker, err := NewStatusChecker()
 	if err != nil {
-		close(resc)
-		close(errc)
-		return resc, errc, err
+		panic(err)
 	}
 
-	cleanup.Add(1)
+	cleanup.Add()
 	go func() {
 		defer func() {
 			fmt.Println("cleanup: fetch.Loop")
@@ -60,7 +56,7 @@ func Loop(
 
 		for {
 			select {
-			case <-exit:
+			case <-cleanup.E:
 				return
 			case <-sleepTimer.C:
 				fetcherIndex = 0
@@ -89,5 +85,5 @@ func Loop(
 		}
 	}()
 
-	return resc, errc, nil
+	return resc, errc
 }

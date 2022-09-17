@@ -106,7 +106,7 @@ func NewDB(dbPath string) *sql.DB {
 	return db
 }
 
-func writeRecord(db *sql.DB, record Record) error {
+func WriteRecord(record Record, db *sql.DB) error {
 	_, err := db.Exec(
 		insertRecordSQL,
 		record.Underlying,

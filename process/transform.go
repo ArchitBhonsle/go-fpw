@@ -37,7 +37,7 @@ type Option struct {
 	TotalTradedVolume               int
 }
 
-func transform(fetched fetch.Fetched) (Data, error) {
+func Transform(fetched fetch.Fetched, _ struct{}) (Data, error) {
 	res := Data{}
 
 	timestamp, err := time.Parse("02-Jan-2006 15:04:05", fetched.Records.Timestamp)

@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/ArchitBhonsle/go-fpw/fetch"
 	"github.com/ArchitBhonsle/go-fpw/options"
+	"github.com/ArchitBhonsle/go-fpw/pipes"
 	"github.com/ArchitBhonsle/go-fpw/process"
 	"github.com/ArchitBhonsle/go-fpw/write"
 )
@@ -20,68 +20,44 @@ func main() {
 	options := options.ParseOptions()
 
 	// setup the cleanup mechanism
-	exit := make(chan struct{})
-	cleanup := sync.WaitGroup{}
+	cleanup := pipes.NewCleanup()
 
 	defer func() {
 		fmt.Println("exiting")
-		close(exit)
-		cleanup.Wait()
+		cleanup.Cleanup()
 	}()
 
 	// fetch
-	fetchResults, fetchErrors, err := fetch.Loop(
+	fetchResults, fetchErrors := fetch.Loop(
 		options.Symbols,
 		options.NRetries,
 		options.SleepInterval,
 		options.FetchInterval,
 		options.RefetchInterval,
-		exit,
-		&cleanup,
+		cleanup,
 	)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
 	// process
-	processResults, processErrors, err := process.Loop(fetchResults, exit, &cleanup)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	processResults, processErrors := pipes.PipeWithFanout(
+		fetchResults,
+		struct{}{},
+		process.Transform,
+		options.NProcessFanout,
+		cleanup,
+	)
 
 	// write
 	db := write.NewDB("out/test.db")
-	writeErrors := write.Loop(processResults, db, exit, &cleanup)
+	writeErrors := write.Loop(processResults, db, cleanup)
 
-	errors := merge(exit, &cleanup, fetchErrors, processErrors, writeErrors)
+	errors := pipes.Merge(cleanup, fetchErrors, processErrors, writeErrors)
 
 	for {
 		select {
-		case <-exit:
+		case <-cleanup.E:
 			return
 		case e := <-errors:
-			fmt.Println(e)
-			return
+			panic(e)
 		}
 	}
-}
-
-func merge[T any](exit <-chan struct{}, cleanup *sync.WaitGroup, channels ...<-chan T) <-chan T {
-	out := make(chan T)
-
-	for i := range channels {
-		c := channels[i]
-		go func() {
-			select {
-			case <-exit:
-				return
-			case v := <-c:
-				out <- v
-			}
-		}()
-	}
-
-	return out
 }
