@@ -9,7 +9,7 @@ import (
 
 const baseUrl = "https://www.nseindia.com/api/option-chain-indices?symbol="
 
-type Fetcher struct {
+type fetcher struct {
 	symbol          string
 	url             string
 	client          http.Client
@@ -18,17 +18,17 @@ type Fetcher struct {
 	refetchInterval time.Duration
 }
 
-func NewFetcher(symbol string, nRetries int, refetchInterval time.Duration) (Fetcher, error) {
+func newFetcher(symbol string, nRetries int, refetchInterval time.Duration) (fetcher, error) {
 	url := baseUrl + symbol
 	client := http.Client{}
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return Fetcher{}, err
+		return fetcher{}, err
 	}
 	request.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
 
-	fetcher := Fetcher{
+	fetcher := fetcher{
 		symbol:          symbol,
 		url:             url,
 		client:          client,
@@ -40,11 +40,11 @@ func NewFetcher(symbol string, nRetries int, refetchInterval time.Duration) (Fet
 	return fetcher, nil
 }
 
-func (f *Fetcher) Symbol() string {
+func (f *fetcher) Symbol() string {
 	return f.symbol
 }
 
-func (fetcher *Fetcher) RawFetch() (Fetched, error) {
+func (fetcher *fetcher) RawFetch() (Fetched, error) {
 	resp, err := fetcher.client.Do(fetcher.request)
 	if err != nil {
 		return Fetched{}, err
@@ -65,7 +65,7 @@ func (fetcher *Fetcher) RawFetch() (Fetched, error) {
 	return fetched, nil
 }
 
-func (f *Fetcher) Fetch() (Fetched, error) {
+func (f *fetcher) Fetch() (Fetched, error) {
 	refetchTimer := time.NewTimer(f.refetchInterval)
 	for r := 0; r <= f.nRetries; r++ {
 		fetched, err := f.RawFetch()

@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"time"
 
 	"github.com/ArchitBhonsle/go-fpw/fetch"
 	"github.com/ArchitBhonsle/go-fpw/options"
@@ -22,21 +23,14 @@ func main() {
 	// setup the cleanup mechanism
 	cleanup := pipes.NewCleanup()
 
-	defer func() {
-		fmt.Println("exiting")
-		cleanup.Cleanup()
-	}()
+	ticker := time.NewTicker(options.SleepInterval)
 
 	// fetch
-	fetchResults, fetchErrors := fetch.Loop(
-		options.Symbols,
-		options.NRetries,
-		options.SleepInterval,
-		options.FetchInterval,
-		options.RefetchInterval,
+	fetchResults, fetchErrors := pipes.Pipe(
+		ticker.C,
+		fetch.NewFetcher(options.Symbols[0], options.NRetries, options.RefetchInterval),
 		cleanup,
 	)
-
 	// process
 	processResults, processErrors := pipes.PipeWithFanout(
 		fetchResults,
@@ -54,6 +48,11 @@ func main() {
 	)
 
 	errors := pipes.Merge(cleanup, fetchErrors, processErrors, writeErrors)
+
+	defer func() {
+		log.Println("exiting")
+		cleanup.Cleanup()
+	}()
 
 	for {
 		select {

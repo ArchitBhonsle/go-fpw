@@ -11,7 +11,7 @@ func NewWriter(dbPath string) func(data process.Data) (struct{}, error) {
 	db := newDB(dbPath)
 
 	return func(data process.Data) (struct{}, error) {
-		log.Println("writing")
+		log.Println(data.Underlying, "writing")
 
 		records := transform(data)
 		for _, record := range records {

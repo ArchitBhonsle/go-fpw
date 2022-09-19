@@ -2,6 +2,7 @@ package process
 
 import (
 	"log"
+	"math"
 	"time"
 
 	"github.com/ArchitBhonsle/go-fpw/fetch"
@@ -39,7 +40,7 @@ type Option struct {
 }
 
 func Transform(fetched fetch.Fetched) (Data, error) {
-	log.Println("processing")
+	log.Println(fetched.Records.Data[0].PE.Underlying, "processing")
 
 	res := Data{}
 
@@ -69,24 +70,26 @@ func Transform(fetched fetch.Fetched) (Data, error) {
 	res.ExpiryDate = expiryDate
 	targetExpiryDate := expiryDate.Format("02-Jan-2006")
 
-	const multipleOf = 50
-	const delta = 4
-	smallerMultiple := int(res.UnderlyingValue / multipleOf * multipleOf)
-	largerMultiple := int(smallerMultiple + multipleOf)
-	lowerBound := smallerMultiple - (delta * multipleOf)
-	upperBound := largerMultiple + (delta * multipleOf)
-	checkStrikePrice := func(sp int) bool {
-		if lowerBound <= sp && upperBound >= sp {
-			return true
-		} else {
-			return false
+	strikePrices := make(map[float64]bool)
+	baseIndex, difference := -1, math.MaxFloat64
+	for i, sp := range fetched.Records.StrikePrices {
+		diff := math.Abs(float64(sp) - res.UnderlyingValue)
+		if diff < difference {
+			baseIndex = i
+			difference = diff
+		}
+	}
+	for i, sp := range fetched.Records.StrikePrices {
+		diff := i - baseIndex
+		if -5 < diff && diff <= 5 {
+			strikePrices[float64(sp)] = true
 		}
 	}
 
 	records := make([]Record, 0)
 	for _, optionData := range fetched.Records.Data {
 		if optionData.ExpiryDate != targetExpiryDate ||
-			!checkStrikePrice(optionData.StrikePrice) {
+			!strikePrices[float64(optionData.StrikePrice)] {
 			continue
 		}
 
