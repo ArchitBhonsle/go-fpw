@@ -40,15 +40,18 @@ func main() {
 	// process
 	processResults, processErrors := pipes.PipeWithFanout(
 		fetchResults,
-		struct{}{},
 		process.Transform,
 		options.NProcessFanout,
 		cleanup,
 	)
 
 	// write
-	db := write.NewDB("out/test.db")
-	writeErrors := write.Loop(processResults, db, cleanup)
+	writeResults, writeErrors := pipes.PipeWithFanout(
+		processResults,
+		write.NewWriter("out/test.db"),
+		options.NWriteFanout,
+		cleanup,
+	)
 
 	errors := pipes.Merge(cleanup, fetchErrors, processErrors, writeErrors)
 
@@ -56,6 +59,7 @@ func main() {
 		select {
 		case <-cleanup.E:
 			return
+		case <-writeResults:
 		case e := <-errors:
 			panic(e)
 		}

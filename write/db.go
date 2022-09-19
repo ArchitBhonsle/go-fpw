@@ -85,7 +85,7 @@ INSERT INTO Records (
   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
 );`
 
-func NewDB(dbPath string) *sql.DB {
+func newDB(dbPath string) *sql.DB {
 	createTables := false
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		createTables = true
@@ -104,45 +104,4 @@ func NewDB(dbPath string) *sql.DB {
 	}
 
 	return db
-}
-
-func WriteRecord(record Record, db *sql.DB) error {
-	_, err := db.Exec(
-		insertRecordSQL,
-		record.Underlying,
-		record.UnderlyingValue,
-		record.ExpiryDate,
-		record.Timestamp,
-		record.StrikePrice,
-		record.PEAskPrice,
-		record.PEAskQuantity,
-		record.PEBidQuantity,
-		record.PEBidPrice,
-		record.PEChange,
-		record.PEChangeInOpenInterest,
-		record.PEImpliedVolatility,
-		record.PELastTradedPrice,
-		record.PEOpenInterest,
-		record.PEPercentangeChangeInPrice,
-		record.PEPercentangeChangeInOpenInterest,
-		record.PETotalBuyQuantity,
-		record.PETotalSellQuantity,
-		record.PETotalTradedVolume,
-		record.CEAskPrice,
-		record.CEAskQuantity,
-		record.CEBidQuantity,
-		record.CEBidPrice,
-		record.CEChange,
-		record.CEChangeInOpenInterest,
-		record.CEImpliedVolatility,
-		record.CELastTradedPrice,
-		record.CEOpenInterest,
-		record.CEPercentangeChangeInPrice,
-		record.CEPercentangeChangeInOpenInterest,
-		record.CETotalBuyQuantity,
-		record.CETotalSellQuantity,
-		record.CETotalTradedVolume,
-	)
-
-	return err
 }

@@ -1,6 +1,7 @@
 package process
 
 import (
+	"log"
 	"time"
 
 	"github.com/ArchitBhonsle/go-fpw/fetch"
@@ -37,7 +38,9 @@ type Option struct {
 	TotalTradedVolume               int
 }
 
-func Transform(fetched fetch.Fetched, _ struct{}) (Data, error) {
+func Transform(fetched fetch.Fetched) (Data, error) {
+	log.Println("processing")
+
 	res := Data{}
 
 	timestamp, err := time.Parse("02-Jan-2006 15:04:05", fetched.Records.Timestamp)

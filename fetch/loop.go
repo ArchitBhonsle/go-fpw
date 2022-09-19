@@ -1,7 +1,7 @@
 package fetch
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/ArchitBhonsle/go-fpw/pipes"
@@ -36,7 +36,6 @@ func Loop(
 	cleanup.Add()
 	go func() {
 		defer func() {
-			fmt.Println("cleanup: fetch.Loop")
 			close(resc)
 			close(errc)
 			cleanup.Done()
@@ -70,7 +69,7 @@ func Loop(
 					continue
 				}
 
-				fmt.Println(time.Now().Format("15:04:05.000"), fetchers[fetcherIndex].symbol, "fetching")
+				log.Println("fetching")
 
 				fetched, err := fetchers[fetcherIndex].Fetch()
 				if err != nil {
