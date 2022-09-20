@@ -23,14 +23,24 @@ func main() {
 	// setup the cleanup mechanism
 	cleanup := pipes.NewCleanup()
 
+	// generator
 	ticker := time.NewTicker(options.SleepInterval)
+
+	// Does not work as expected and sacrifices type safety
+	// pipes.Pipeline(
+	// 	ticker.C,
+	// 	fetch.NewFetcher(options.Symbol, options.NRetries, options.RefetchInterval),
+	// 	process.Transform,
+	// 	write.NewWriter("out/test.db"),
+	// )
 
 	// fetch
 	fetchResults, fetchErrors := pipes.Pipe(
 		ticker.C,
-		fetch.NewFetcher(options.Symbols[0], options.NRetries, options.RefetchInterval),
+		fetch.NewFetcher(options.Symbol, options.NRetries, options.RefetchInterval),
 		cleanup,
 	)
+
 	// process
 	processResults, processErrors := pipes.PipeWithFanout(
 		fetchResults,
@@ -54,6 +64,7 @@ func main() {
 		cleanup.Cleanup()
 	}()
 
+	// consumer
 	for {
 		select {
 		case <-cleanup.E:

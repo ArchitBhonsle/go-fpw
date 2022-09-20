@@ -3,14 +3,13 @@ package options
 import (
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Options struct {
-	Symbols         []string
+	Symbol          string
 	NProcessFanout  int
 	NWriteFanout    int
 	NRetries        int
@@ -25,11 +24,7 @@ func ParseOptions() Options {
 		panic(err)
 	}
 
-	symbolsS := os.Getenv("SYMBOLS")
-	symbols := strings.Split(symbolsS, " ")
-	if len(symbols) == 0 {
-		panic("The number of arguments (symbols) should be greater than 0.")
-	}
+	symbol := os.Getenv("SYMBOL")
 
 	nProcessFanout, err := strconv.Atoi(os.Getenv("N_PROCESS_FANOUT"))
 	if err != nil {
@@ -52,12 +47,6 @@ func ParseOptions() Options {
 	}
 	sleepInterval := time.Second * time.Duration(sleepIntervalN)
 
-	fetchIntervalN, err := strconv.Atoi(os.Getenv("FETCH_INTERVAL"))
-	if err != nil {
-		panic(err)
-	}
-	fetchInterval := time.Second * time.Duration(fetchIntervalN)
-
 	refetchIntervalN, err := strconv.Atoi(os.Getenv("REFETCH_INTERVAL"))
 	if err != nil {
 		panic(err)
@@ -65,12 +54,11 @@ func ParseOptions() Options {
 	refetchInterval := time.Second * time.Duration(refetchIntervalN)
 
 	return Options{
-		Symbols:         symbols,
+		Symbol:          symbol,
 		NProcessFanout:  nProcessFanout,
 		NWriteFanout:    nWriteFanout,
 		NRetries:        nRetries,
 		SleepInterval:   sleepInterval,
-		FetchInterval:   fetchInterval,
 		RefetchInterval: refetchInterval,
 	}
 }
