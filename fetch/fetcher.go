@@ -21,3 +21,20 @@ func NewFetcher(
 		return fetcher.Fetch()
 	}
 }
+
+func NewFetcherAny(
+	symbol string,
+	nRetries int,
+	refetchInterval time.Duration,
+) func(any) (any, error) {
+	fetcher, err := newFetcher(symbol, nRetries, refetchInterval)
+	if err != nil {
+		panic(err)
+	}
+
+	return func(tAny any) (any, error) {
+		log.Println(symbol, "fetching")
+
+		return fetcher.Fetch()
+	}
+}

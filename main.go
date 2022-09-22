@@ -22,54 +22,35 @@ func main() {
 
 	// setup the cleanup mechanism
 	cleanup := pipes.NewCleanup()
-
-	// generator
-	ticker := time.NewTicker(options.SleepInterval)
-
-	// Does not work as expected and sacrifices type safety
-	// pipes.Pipeline(
-	// 	ticker.C,
-	// 	fetch.NewFetcher(options.Symbol, options.NRetries, options.RefetchInterval),
-	// 	process.Transform,
-	// 	write.NewWriter("out/test.db"),
-	// )
-
-	// fetch
-	fetchResults, fetchErrors := pipes.Pipe(
-		ticker.C,
-		fetch.NewFetcher(options.Symbol, options.NRetries, options.RefetchInterval),
-		cleanup,
-	)
-
-	// process
-	processResults, processErrors := pipes.PipeWithFanout(
-		fetchResults,
-		process.Transform,
-		options.NProcessFanout,
-		cleanup,
-	)
-
-	// write
-	writeResults, writeErrors := pipes.PipeWithFanout(
-		processResults,
-		write.NewWriter("out/test.db"),
-		options.NWriteFanout,
-		cleanup,
-	)
-
-	errors := pipes.Merge(cleanup, fetchErrors, processErrors, writeErrors)
-
 	defer func() {
 		log.Println("exiting")
 		cleanup.Cleanup()
 	}()
+
+	// generator
+	ticker := time.NewTicker(options.SleepInterval)
+	generator := make(chan any)
+	go func() {
+		for t := range ticker.C {
+			generator <- t
+		}
+	}()
+
+	// Does not work as expected and sacrifices type safety
+	results, errors := pipes.Pipeline(
+		generator,
+		fetch.NewFetcherAny(options.Symbol, options.NRetries, options.RefetchInterval),
+		process.TransformAny,
+		write.NewWriterAny("out/test.db"),
+	)
 
 	// consumer
 	for {
 		select {
 		case <-cleanup.E:
 			return
-		case <-writeResults:
+		case r := <-results:
+			log.Println(r)
 		case e := <-errors:
 			panic(e)
 		}

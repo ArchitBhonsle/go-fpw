@@ -24,6 +24,25 @@ func NewWriter(dbPath string) func(data process.Data) (struct{}, error) {
 	}
 }
 
+func NewWriterAny(dbPath string) func(dataAny any) (any, error) {
+	db := newDB(dbPath)
+
+	return func(dataAny any) (any, error) {
+		data := dataAny.(process.Data)
+
+		log.Println(data.Underlying, "writing")
+
+		records := transform(data)
+		for _, record := range records {
+			err := writeRecord(record, db)
+			if err != nil {
+				return struct{}{}, err
+			}
+		}
+		return struct{}{}, nil
+	}
+}
+
 func writeRecord(record Record, db *sql.DB) error {
 	_, err := db.Exec(
 		insertRecordSQL,

@@ -115,6 +115,83 @@ func Transform(fetched fetch.Fetched) (Data, error) {
 	return res, nil
 }
 
+func TransformAny(fetchedAny any) (any, error) {
+	fetched := fetchedAny.(fetch.Fetched)
+	log.Println(fetched.Records.Data[0].PE.Underlying, "processing")
+
+	res := Data{}
+
+	timestamp, err := time.Parse("02-Jan-2006 15:04:05", fetched.Records.Timestamp)
+	if err != nil {
+		return res, err
+	}
+	res.Timestamp = timestamp
+	res.UnderlyingValue = fetched.Records.UnderlyingValue
+
+	expiryDates := make([]time.Time, 0, len(fetched.Records.ExpiryDates))
+	for _, ed := range fetched.Records.ExpiryDates {
+		edParsed, err := time.Parse("02-Jan-2006", ed)
+		if err != nil {
+			return res, err
+		}
+		expiryDates = append(expiryDates, edParsed)
+	}
+
+	var expiryDate time.Time // for now it's the first expiry date after the current timestamp
+	for _, ed := range expiryDates {
+		if ed.After(timestamp) {
+			expiryDate = ed
+			break
+		}
+	}
+	res.ExpiryDate = expiryDate
+	targetExpiryDate := expiryDate.Format("02-Jan-2006")
+
+	strikePrices := make(map[float64]bool)
+	baseIndex, difference := -1, math.MaxFloat64
+	for i, sp := range fetched.Records.StrikePrices {
+		diff := math.Abs(float64(sp) - res.UnderlyingValue)
+		if diff < difference {
+			baseIndex = i
+			difference = diff
+		}
+	}
+	for i, sp := range fetched.Records.StrikePrices {
+		diff := i - baseIndex
+		if -5 < diff && diff <= 5 {
+			strikePrices[float64(sp)] = true
+		}
+	}
+
+	records := make([]Record, 0)
+	for _, optionData := range fetched.Records.Data {
+		if optionData.ExpiryDate != targetExpiryDate ||
+			!strikePrices[float64(optionData.StrikePrice)] {
+			continue
+		}
+
+		if res.Underlying == "" {
+			if optionData.CE != nil {
+				res.Underlying = optionData.CE.Underlying
+			}
+			if optionData.PE != nil {
+				res.Underlying = optionData.PE.Underlying
+			}
+		}
+
+		record := Record{
+			StrikePrice: float64(optionData.StrikePrice),
+			CE:          transformOption(optionData.CE),
+			PE:          transformOption(optionData.PE),
+		}
+
+		records = append(records, record)
+	}
+	res.Records = records
+
+	return res, nil
+}
+
 func transformOption(o *fetch.Option) *Option {
 	if o == nil {
 		return nil
